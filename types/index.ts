@@ -40,8 +40,35 @@ export interface Activity {
 }
 
 export interface DashboardStats {
-  total_investigations: number;
-  total_leaks_found: number;
-  high_risk_cases: number;
-  recent_activities: Activity[];
+  total_investigations: number
+  total_leaks_found: number
+  high_risk_cases: number
+  recent_activities: Activity[]
+}
+
+export interface InvestigationTarget {
+  email?: string
+  username?: string
+  phone?: string
+  fullName?: string
+  website?: string
+  domain?: string
+  ipAddress?: string
+}
+
+export interface SearchOptions {
+  includeOsint: boolean
+  includeLeakDetection: boolean
+  includeDomainIntelligence: boolean
+  includeSocialMedia: boolean
+}
+
+export interface InvestigationResult {
+  id: string
+  target: string
+  type: 'email' | 'username' | 'phone' | 'domain' | 'ip' | 'website'
+  status: 'pending' | 'running' | 'completed'
+  risk: 'low' | 'medium' | 'high' | 'critical'
+  created: string
+  findings?: string[]
 }

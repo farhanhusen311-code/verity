@@ -120,6 +120,7 @@ model Investigation {
   reports Report[]
   entities Entity[]
   relationships Relationship[]
+  riskAssessments RiskAssessment[]
   
   // Timestamps
   createdAt DateTime @default(now())
@@ -268,6 +269,99 @@ model Relationship {
   @@index([investigationId])
   @@index([confidence])
   @@unique([fromEntityId, toEntityId, type]) // prevent duplicate relationships
+}
+
+// ==================== RISK SCORING MODELS ====================
+
+enum ScoringMethod {
+  RULE_BASED
+  AI_MODEL
+  HYBRID
+}
+
+enum RecommendationPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+model RiskAssessment {
+  id              String   @id @default(cuid())
+
+  // Relationships
+  investigationId String
+  investigation   Investigation @relation(fields: [investigationId], references: [id], onDelete: Cascade)
+
+  // Score details
+  score           Int           // 0 - 100
+  level           RiskLevel     // LOW | MEDIUM | HIGH | CRITICAL
+  method          ScoringMethod @default(RULE_BASED)
+
+  // Explainability
+  summary         String?       // short human-readable summary
+  reasoning       String?       // aggregated reasoning text
+
+  // Child records
+  ruleEvaluations RuleEvaluation[]
+  recommendations Recommendation[]
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([investigationId])
+  @@index([level])
+  @@index([method])
+  @@index([createdAt])
+}
+
+model RuleEvaluation {
+  id              String   @id @default(cuid())
+
+  // Relationships
+  assessmentId    String
+  assessment      RiskAssessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+
+  // Rule details
+  ruleId          String   // stable rule identifier, e.g. "leak.email-multiple-sources"
+  name            String
+  description     String?
+  category        String   // maps to weight category
+  weight          Int      // weight contributed when triggered
+  triggered       Boolean  // true = risk detected (rule failed)
+  score           Int      // actual points contributed to the total
+  evidence        String?  // JSON array of evidence strings
+  reasoning       String?  // why this rule triggered / passed
+
+  // Timestamps
+  createdAt DateTime @default(now())
+
+  @@index([assessmentId])
+  @@index([ruleId])
+  @@index([triggered])
+  @@index([category])
+}
+
+model Recommendation {
+  id              String   @id @default(cuid())
+
+  // Relationships
+  assessmentId    String
+  assessment      RiskAssessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+
+  // Recommendation details
+  code            String   // stable code, e.g. "ENABLE_MFA"
+  title           String   // e.g. "Enable MFA"
+  description     String?
+  priority        RecommendationPriority @default(MEDIUM)
+
+  // Timestamps
+  createdAt DateTime @default(now())
+
+  @@index([assessmentId])
+  @@index([code])
+  @@index([priority])
 }
 
 

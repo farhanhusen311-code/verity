@@ -32,6 +32,44 @@ enum RiskLevel {
   CRITICAL
 }
 
+enum EntityType {
+  EMAIL
+  USERNAME
+  PHONE_NUMBER
+  FULL_NAME
+  WEBSITE_URL
+  DOMAIN
+  SUBDOMAIN
+  IP_ADDRESS
+  IPV6
+  ASN
+  DNS_RECORD
+  SSL_CERTIFICATE
+  ORGANIZATION
+  REGISTRAR
+  COUNTRY
+  CITY
+  SOCIAL_MEDIA_ACCOUNT
+  GITHUB_ACCOUNT
+  LINKEDIN_ACCOUNT
+  FACEBOOK_ACCOUNT
+  INSTAGRAM_ACCOUNT
+  X_ACCOUNT
+}
+
+enum RelationshipType {
+  OWNS
+  USES
+  REGISTERED_TO
+  HOSTED_ON
+  RESOLVES_TO
+  BELONGS_TO
+  ASSOCIATED_WITH
+  LINKED_TO
+  MENTIONED_IN
+  CONNECTED_TO
+}
+
 // ==================== MODELS ====================
 
 model User {
@@ -80,6 +118,8 @@ model Investigation {
   // Relationships
   results InvestigationResult[]
   reports Report[]
+  entities Entity[]
+  relationships Relationship[]
   
   // Timestamps
   createdAt DateTime @default(now())
@@ -159,3 +199,75 @@ model ActivityLog {
   @@index([action])
   @@index([createdAt])
 }
+
+// ==================== CORRELATION MODELS ====================
+
+model Entity {
+  id              String   @id @default(cuid())
+  
+  // Entity details
+  type            EntityType
+  value           String   // normalized value
+  originalValue   String?  // original value before normalization
+  normalizedHash  String   @unique // hash for deduplication
+  
+  // Relationships
+  investigationId String?
+  investigation   Investigation? @relation(fields: [investigationId], references: [id], onDelete: Cascade)
+  
+  relationships   Relationship[] @relation("EntityFrom")
+  relatedTo       Relationship[] @relation("EntityTo")
+  
+  // Metadata
+  metadata        String?  // JSON metadata
+  confidence      Int      @default(100) // 0-100
+  source          String?  // where this entity came from
+  
+  // Timestamps
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([type])
+  @@index([value])
+  @@index([normalizedHash])
+  @@index([investigationId])
+  @@index([source])
+  @@index([createdAt])
+}
+
+model Relationship {
+  id              String   @id @default(cuid())
+  
+  // Relationship details
+  type            RelationshipType
+  
+  // Entities
+  fromEntityId    String
+  fromEntity      Entity @relation("EntityFrom", fields: [fromEntityId], references: [id], onDelete: Cascade)
+  
+  toEntityId      String
+  toEntity        Entity @relation("EntityTo", fields: [toEntityId], references: [id], onDelete: Cascade)
+  
+  // Investigation context
+  investigationId String?
+  investigation   Investigation? @relation(fields: [investigationId], references: [id], onDelete: SetNull)
+  
+  // Metadata
+  confidence      Int      @default(100) // 0-100
+  evidence        String?  // where relationship comes from
+  metadata        String?  // JSON metadata
+  weight          Float    @default(1.0) // for graph algorithms
+  
+  // Timestamps
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([type])
+  @@index([fromEntityId])
+  @@index([toEntityId])
+  @@index([investigationId])
+  @@index([confidence])
+  @@unique([fromEntityId, toEntityId, type]) // prevent duplicate relationships
+}
+
+

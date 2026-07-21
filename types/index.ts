@@ -9,6 +9,64 @@ export interface User {
   created_at: string;
 }
 
+// API Response types
+export interface ApiResponse<T = any> {
+  success: boolean
+  message: string
+  data?: T
+  timestamp: string
+}
+
+export interface ApiError extends ApiResponse {
+  success: false
+  error?: string
+}
+
+// Investigation types
+export interface InvestigationData {
+  id: string
+  email: string | null
+  username: string | null
+  phone: string | null
+  fullName: string | null
+  website: string | null
+  domain: string | null
+  ipAddress: string | null
+  status: 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED'
+  risk: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
+  findings: string | null
+  notes: string | null
+  includeOsint: boolean
+  includeLeakDetection: boolean
+  includeDomainIntelligence: boolean
+  includeSocialMedia: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CreateInvestigationInput {
+  email?: string
+  username?: string
+  phone?: string
+  fullName?: string
+  website?: string
+  domain?: string
+  ipAddress?: string
+  includeOsint?: boolean
+  includeLeakDetection?: boolean
+  includeDomainIntelligence?: boolean
+  includeSocialMedia?: boolean
+  notes?: string
+}
+
+export interface UpdateInvestigationInput {
+  status?: 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED'
+  risk?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
+  findings?: string
+  notes?: string
+}
+
+// Legacy Investigation interface (kept for dashboard compatibility)
 export interface Investigation {
   id: string;
   title: string;

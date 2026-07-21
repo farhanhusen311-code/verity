@@ -1,0 +1,60 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Investigation {
+  id        String   @id @default(cuid())
+  
+  // Search targets - at least one must be provided
+  email     String?
+  username  String?
+  phone     String?
+  fullName  String?
+  website   String?
+  domain    String?
+  ipAddress String?
+  
+  // Investigation metadata
+  status    InvestigationStatus @default(PENDING)
+  risk      RiskLevel           @default(LOW)
+  findings  String?             // JSON stored as text
+  notes     String?
+  
+  // Search options
+  includeOsint              Boolean @default(true)
+  includeLeakDetection      Boolean @default(true)
+  includeDomainIntelligence Boolean @default(true)
+  includeSocialMedia        Boolean @default(true)
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([email])
+  @@index([username])
+  @@index([domain])
+  @@index([status])
+  @@index([createdAt])
+}
+
+enum InvestigationStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}

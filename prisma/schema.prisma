@@ -10,39 +10,12 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Investigation {
-  id        String   @id @default(cuid())
-  
-  // Search targets - at least one must be provided
-  email     String?
-  username  String?
-  phone     String?
-  fullName  String?
-  website   String?
-  domain    String?
-  ipAddress String?
-  
-  // Investigation metadata
-  status    InvestigationStatus @default(PENDING)
-  risk      RiskLevel           @default(LOW)
-  findings  String?             // JSON stored as text
-  notes     String?
-  
-  // Search options
-  includeOsint              Boolean @default(true)
-  includeLeakDetection      Boolean @default(true)
-  includeDomainIntelligence Boolean @default(true)
-  includeSocialMedia        Boolean @default(true)
-  
-  // Timestamps
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  
-  @@index([email])
-  @@index([username])
-  @@index([domain])
-  @@index([status])
-  @@index([createdAt])
+// ==================== ENUMS ====================
+
+enum UserRole {
+  ADMIN
+  INVESTIGATOR
+  ANALYST
 }
 
 enum InvestigationStatus {
@@ -57,4 +30,132 @@ enum RiskLevel {
   MEDIUM
   HIGH
   CRITICAL
+}
+
+// ==================== MODELS ====================
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      UserRole @default(ANALYST)
+  
+  // Relationships
+  investigations InvestigationResult[]
+  activityLogs   ActivityLog[]
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([email])
+  @@index([role])
+}
+
+model Investigation {
+  id        String   @id @default(cuid())
+  
+  // Search targets - at least one must be provided
+  email     String?
+  username  String?
+  phone     String?
+  fullName  String?
+  website   String?
+  domain    String?
+  ip        String?
+  
+  // Investigation metadata
+  status    InvestigationStatus @default(PENDING)
+  risk      RiskLevel           @default(LOW)
+  notes     String?
+  createdBy String?
+  
+  // Search options
+  includeOsint              Boolean @default(true)
+  includeLeakDetection      Boolean @default(true)
+  includeDomainIntelligence Boolean @default(true)
+  includeSocialMedia        Boolean @default(true)
+  
+  // Relationships
+  results InvestigationResult[]
+  reports Report[]
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([email])
+  @@index([username])
+  @@index([domain])
+  @@index([ip])
+  @@index([status])
+  @@index([risk])
+  @@index([createdAt])
+}
+
+model InvestigationResult {
+  id                String   @id @default(cuid())
+  
+  // Relationships
+  investigationId   String
+  investigation     Investigation @relation(fields: [investigationId], references: [id], onDelete: Cascade)
+  
+  userId            String?
+  user              User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  
+  // Result details
+  source            String   // e.g., "email-breach", "domain-whois", "ip-geolocation"
+  category          String   // e.g., "breach", "whois", "dns", "ssl", "reputation"
+  title             String
+  description       String?
+  url               String?
+  confidence        Int?     // 0-100
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  
+  @@index([investigationId])
+  @@index([userId])
+  @@index([source])
+  @@index([category])
+  @@index([createdAt])
+}
+
+model Report {
+  id                String   @id @default(cuid())
+  
+  // Relationships
+  investigationId   String
+  investigation     Investigation @relation(fields: [investigationId], references: [id], onDelete: Cascade)
+  
+  // Report details
+  summary           String
+  recommendation    String?
+  pdfUrl            String?
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  
+  @@index([investigationId])
+  @@index([createdAt])
+}
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  
+  // Relationships
+  userId    String
+  user      User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Activity details
+  action    String   // e.g., "created", "updated", "deleted", "viewed"
+  target    String   // e.g., "investigation:123", "report:456"
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
 }

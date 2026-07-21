@@ -15,7 +15,7 @@ export class InvestigationRepository {
           fullName: data.fullName || null,
           website: data.website || null,
           domain: data.domain || null,
-          ipAddress: data.ipAddress || null,
+          ip: data.ipAddress || null,
           includeOsint: data.includeOsint ?? true,
           includeLeakDetection: data.includeLeakDetection ?? true,
           includeDomainIntelligence: data.includeDomainIntelligence ?? true,
@@ -113,6 +113,109 @@ export class InvestigationRepository {
     }
   }
 
+  async findByStatus(status: string, skip: number = 0, take: number = 10) {
+    try {
+      logger.debug('Finding investigations by status', { status })
+
+      const [investigations, total] = await Promise.all([
+        prisma.investigation.findMany({
+          where: { status },
+          skip,
+          take,
+          orderBy: { createdAt: 'desc' },
+          include: {
+            results: true,
+            reports: true,
+          },
+        }),
+        prisma.investigation.count({ where: { status } }),
+      ])
+
+      logger.debug('Investigations fetched by status', { count: investigations.length })
+      return {
+        data: investigations.map((inv) => this.mapToDto(inv)),
+        total,
+      }
+    } catch (error) {
+      logger.error('Failed to find investigations by status', error)
+      throw error
+    }
+  }
+
+  async findByRisk(risk: string, skip: number = 0, take: number = 10) {
+    try {
+      logger.debug('Finding investigations by risk', { risk })
+
+      const [investigations, total] = await Promise.all([
+        prisma.investigation.findMany({
+          where: { risk },
+          skip,
+          take,
+          orderBy: { createdAt: 'desc' },
+          include: {
+            results: true,
+            reports: true,
+          },
+        }),
+        prisma.investigation.count({ where: { risk } }),
+      ])
+
+      logger.debug('Investigations fetched by risk', { count: investigations.length })
+      return {
+        data: investigations.map((inv) => this.mapToDto(inv)),
+        total,
+      }
+    } catch (error) {
+      logger.error('Failed to find investigations by risk', error)
+      throw error
+    }
+  }
+
+  async search(query: string, skip: number = 0, take: number = 10) {
+    try {
+      logger.debug('Searching investigations', { query })
+
+      const [investigations, total] = await Promise.all([
+        prisma.investigation.findMany({
+          where: {
+            OR: [
+              { email: { contains: query, mode: 'insensitive' } },
+              { username: { contains: query, mode: 'insensitive' } },
+              { domain: { contains: query, mode: 'insensitive' } },
+              { ip: { contains: query, mode: 'insensitive' } },
+            ],
+          },
+          skip,
+          take,
+          orderBy: { createdAt: 'desc' },
+          include: {
+            results: true,
+            reports: true,
+          },
+        }),
+        prisma.investigation.count({
+          where: {
+            OR: [
+              { email: { contains: query, mode: 'insensitive' } },
+              { username: { contains: query, mode: 'insensitive' } },
+              { domain: { contains: query, mode: 'insensitive' } },
+              { ip: { contains: query, mode: 'insensitive' } },
+            ],
+          },
+        }),
+      ])
+
+      logger.debug('Search results fetched', { count: investigations.length })
+      return {
+        data: investigations.map((inv) => this.mapToDto(inv)),
+        total,
+      }
+    } catch (error) {
+      logger.error('Failed to search investigations', error)
+      throw error
+    }
+  }
+
   private mapToDto(investigation: any): InvestigationData {
     return {
       id: investigation.id,
@@ -122,7 +225,7 @@ export class InvestigationRepository {
       fullName: investigation.fullName,
       website: investigation.website,
       domain: investigation.domain,
-      ipAddress: investigation.ipAddress,
+      ipAddress: investigation.ip,
       status: investigation.status,
       risk: investigation.risk,
       findings: investigation.findings,
